@@ -4,18 +4,30 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Rectangle;
 
+import java.util.List;
+
+import static com.badlogic.gdx.math.MathUtils.random;
+
 public class Obstacle {
     private Rectangle topPipe;
     private Rectangle bottomPipe;
     private float speed;
     private TextureRegion topTile, bottomTile, fillerTile;
+    private float initalX;
+    private float gap;
+    private float tileSquared;
+    private int maxY;
 
-    public Obstacle(float x, float y, float tileSquared, float gap, float speed) {
+    public Obstacle(float initialX, int maxY, float gap, float speed, float tileSquared) {
         this.speed = speed;
+        this.initalX = tileSquared * initialX;
+        this.gap = tileSquared * gap;
+        this.tileSquared = tileSquared;
+        this.maxY = maxY;
 
-        topPipe = new Rectangle(x, y, tileSquared, tileSquared);
-
-        bottomPipe = new Rectangle(x, y + gap, tileSquared, tileSquared);
+        int randY = random(0, maxY);
+        topPipe = new Rectangle(tileSquared * initialX, (tileSquared * randY), tileSquared, tileSquared);
+        bottomPipe = new Rectangle(tileSquared * initialX, (tileSquared * randY) + (tileSquared * gap), tileSquared, tileSquared);
 
         Texture tilesetTexture = new Texture("woods_tileset.png");
 
@@ -26,6 +38,11 @@ public class Obstacle {
     }
 
     public void update(float deltaTime) {
+        if (this.topPipe.x < 0) {
+            setX(1024f + 15f + 4f);
+            setRandomY(1, this.maxY);
+        }
+
         topPipe.x -= speed * deltaTime;
         bottomPipe.x -= speed * deltaTime;
     }
@@ -42,12 +59,18 @@ public class Obstacle {
         return fillerTile;
     }
 
-    public void setBottomPipeX(float x) {
+    public void setX(float x) {
+        this.topPipe.x = x;
         this.bottomPipe.x = x;
     }
 
-    public void setTopPipeX(float x) {
-        this.topPipe.x = x;
+    public void setY(float y) {
+        this.topPipe.y = y;
+        this.bottomPipe.y = y + this.gap;
+    }
+
+    public void setRandomY(int min, int max) {
+        setY(this.tileSquared * random(min, max));
     }
 
     public Rectangle getTopPipe() {
@@ -64,6 +87,15 @@ public class Obstacle {
 
     public float getSpeed() {
         return speed;
+    }
+
+    public void reset() {
+        setX(initalX);
+        setRandomY(0, this.maxY);
+    }
+
+    public float getTileSquared() {
+        return this.tileSquared;
     }
 }
 

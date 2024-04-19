@@ -28,7 +28,6 @@ public class BouncyAsep extends ApplicationAdapter {
     private Texture tilesetTexture;
     private TextureRegion topTile, bottomTile, fillerTile;
     private final int tileSquared = 64;
-    Obstacle obs;
     List<Obstacle> obstacles;
 
     @Override
@@ -53,9 +52,10 @@ public class BouncyAsep extends ApplicationAdapter {
         font = new BitmapFont();
 //        obs = new Obstacle(64 * 15, 64 * 3, tileSquared, 64 * 4, 250);
         obstacles = new ArrayList<Obstacle>();
-        obstacles.add(new Obstacle(64 * 15f, 64 * 3f, tileSquared, 64 * 4f, 250f));
-        obstacles.add(new Obstacle(64 * 19f, 64 * 5f, tileSquared, 64 * 4f, 250f));
 
+        for (int i = 0; i < 4; i++) {
+            obstacles.add(new Obstacle(15f + (4f * i), 7, 5f, 250f, tileSquared));
+        }
     }
 
     @Override
@@ -66,16 +66,24 @@ public class BouncyAsep extends ApplicationAdapter {
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
 
-        font.setColor(Color.WHITE);
-        String debugText = "Y: " + Math.round(entity.getY()) +
-                "\nVelocity: " + entity.getVelocity() +
-                "\nGravity: " + entity.getGravity();
-        font.draw(batch, debugText, 10, 768 - 10);
-
-        batch.draw(bucketImage, entity.getX(), entity.getY());
-
         for (Obstacle obs : obstacles) {
             float obstacleX = obs.getTopPipe().getX();
+            float topY = obs.getTopPipe().getY() / tileSquared;
+            float botY = obs.getBottomPipe().getY() / tileSquared;
+
+            for (int i = 0; i < 12; i++) {
+                if ((i >= topY && i - 1 < botY)) {
+                    continue;
+                }
+
+                batch.draw(
+                        obs.getFillerTile(),
+                        obstacleX,
+                        obs.getTileSquared() * i,
+                        obs.getTopPipe().getWidth(),
+                        obs.getTopPipe().getHeight()
+                );
+            }
 
             batch.draw(
                     obs.getTopTile(),
@@ -92,9 +100,18 @@ public class BouncyAsep extends ApplicationAdapter {
                     obs.getBottomPipe().getHeight()
             );
 
-
             if (isRunning) obs.update(Gdx.graphics.getDeltaTime());
         }
+
+        font.setColor(Color.WHITE);
+        String debugText = "Y: " + Math.round(entity.getY()) +
+                "\nVelocity: " + entity.getVelocity() +
+                "\nGravity: " + entity.getGravity();
+
+        font.draw(batch, debugText, 10, 768 - 10);
+
+        batch.draw(bucketImage, entity.getX(), entity.getY());
+
 
         batch.end();
         engineRun();
@@ -105,7 +122,10 @@ public class BouncyAsep extends ApplicationAdapter {
             isRunning = false;
             entity.setVelocity(0);
             entity.setY(768 / 2f);
-//            resetObstacles();
+
+            for (Obstacle obs : obstacles) {
+                obs.reset();
+            }
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.Q)) Gdx.app.exit();
         if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) || Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) &&
@@ -141,6 +161,10 @@ public class BouncyAsep extends ApplicationAdapter {
         }
         return generatedObstacles;
     }
+
+//    private Obstacle generateObstacle() {
+//
+//    }
 
     @Override
     public void dispose() {
