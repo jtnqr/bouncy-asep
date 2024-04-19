@@ -19,6 +19,7 @@ import java.util.List;
 public class BouncyAsep extends ApplicationAdapter {
     Texture bucketImage;
     Texture rainImage;
+    Background layer1, layer2, layer3;
     Sound jumpSound;
     SpriteBatch batch;
     OrthographicCamera camera;
@@ -33,14 +34,17 @@ public class BouncyAsep extends ApplicationAdapter {
     @Override
     public void create() {
         Gdx.app.setLogLevel(Application.LOG_DEBUG);
+        batch = new SpriteBatch();
 
         bucketImage = new Texture(Gdx.files.internal("bucket.png"));
         rainImage = new Texture(Gdx.files.internal("drop.png"));
         jumpSound = Gdx.audio.newSound(Gdx.files.internal("jump.mp3"));
+        layer1 = new Background("bg/background_layer_1.png", 0.1f);
+        layer2 = new Background("bg/background_layer_2.png", 125f);
+        layer3 = new Background("bg/background_layer_3.png", 250f);
 
         camera = new OrthographicCamera();
         camera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-        batch = new SpriteBatch();
 
         entity = new MainEntity(
                 1024 / 2f - 64 / 2f,
@@ -50,11 +54,10 @@ public class BouncyAsep extends ApplicationAdapter {
         );
 
         font = new BitmapFont();
-//        obs = new Obstacle(64 * 15, 64 * 3, tileSquared, 64 * 4, 250);
         obstacles = new ArrayList<Obstacle>();
 
         for (int i = 0; i < 4; i++) {
-            obstacles.add(new Obstacle(15f + (4f * i), 7, 5f, 250f, tileSquared));
+            obstacles.add(new Obstacle(16f + (4f * i), 7, 5f, 250f, tileSquared));
         }
     }
 
@@ -65,6 +68,9 @@ public class BouncyAsep extends ApplicationAdapter {
         camera.update();
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
+        layer1.draw(batch, Gdx.graphics.getHeight());
+        layer2.draw(batch, Gdx.graphics.getHeight());
+        layer3.draw(batch, Gdx.graphics.getHeight());
 
         for (Obstacle obs : obstacles) {
             float obstacleX = obs.getTopPipe().getX();
@@ -126,6 +132,9 @@ public class BouncyAsep extends ApplicationAdapter {
             for (Obstacle obs : obstacles) {
                 obs.reset();
             }
+            layer1.reset();
+            layer2.reset();
+            layer3.reset();
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.Q)) Gdx.app.exit();
         if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) || Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) &&
@@ -146,32 +155,23 @@ public class BouncyAsep extends ApplicationAdapter {
                 isColliding = true;
             }
         }
-        if (isRunning) entity.update(Gdx.graphics.getDeltaTime());
-    }
-
-    private List<Obstacle> generateObstacles(int numObstacles, float minX, float maxX, float minY, float maxY) {
-        // Implement logic to randomly generate obstacle positions and parameters
-        // ...
-        List<Obstacle> generatedObstacles = new ArrayList<Obstacle>();
-        for (int i = 0; i < numObstacles; i++) {
-            float randomX = minX + (float) Math.random() * (maxX - minX);
-            float randomY = minY + (float) Math.random() * (maxY - minY);
-            // ... generate other random parameters ...
-//            generatedObstacles.add(new Obstacle(randomX, randomY, ...));
+        if (isRunning) {
+            entity.update(Gdx.graphics.getDeltaTime());
+            layer1.update(Gdx.graphics.getDeltaTime());
+            layer2.update(Gdx.graphics.getDeltaTime());
+            layer3.update(Gdx.graphics.getDeltaTime());
         }
-        return generatedObstacles;
     }
-
-//    private Obstacle generateObstacle() {
-//
-//    }
 
     @Override
     public void dispose() {
-        font.dispose();
         batch.dispose();
+        font.dispose();
         rainImage.dispose();
         bucketImage.dispose();
         jumpSound.dispose();
+        layer1.dispose();
+        layer2.dispose();
+        layer3.dispose();
     }
 }
