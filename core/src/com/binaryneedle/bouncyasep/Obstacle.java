@@ -38,9 +38,9 @@ public class Obstacle {
     }
 
     public void update(float deltaTime) {
-        if (this.topPipe.x < 0) {
+        if (this.topPipe.x < -gap * 2 / 3f - 1f) {
             setX(1024f + 15f + 4f);
-            setRandomY(1, this.maxY);
+            setRandomY(0, this.maxY);
         }
 
         topPipe.x -= speed * deltaTime;

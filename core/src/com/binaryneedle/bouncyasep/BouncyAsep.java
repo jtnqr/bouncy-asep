@@ -30,6 +30,7 @@ public class BouncyAsep extends ApplicationAdapter {
     private TextureRegion topTile, bottomTile, fillerTile;
     private final int tileSquared = 64;
     List<Obstacle> obstacles;
+    Character sprite;
 
     @Override
     public void create() {
@@ -56,9 +57,12 @@ public class BouncyAsep extends ApplicationAdapter {
         font = new BitmapFont();
         obstacles = new ArrayList<Obstacle>();
 
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 5; i++) {
             obstacles.add(new Obstacle(16f + (4f * i), 7, 5f, 250f, tileSquared));
         }
+
+        sprite = new Character();
+        sprite.create();
     }
 
     @Override
@@ -116,7 +120,7 @@ public class BouncyAsep extends ApplicationAdapter {
 
         font.draw(batch, debugText, 10, 768 - 10);
 
-        batch.draw(bucketImage, entity.getX(), entity.getY());
+        sprite.draw(batch, entity.getX(), entity.getY(), tileSquared, tileSquared);
 
 
         batch.end();
@@ -125,6 +129,7 @@ public class BouncyAsep extends ApplicationAdapter {
 
     public void engineRun() {
         if (Gdx.input.isKeyJustPressed(Input.Keys.R)) {
+            isColliding = false;
             isRunning = false;
             entity.setVelocity(0);
             entity.setY(768 / 2f);
@@ -136,8 +141,8 @@ public class BouncyAsep extends ApplicationAdapter {
             layer2.reset();
             layer3.reset();
         }
-        if (Gdx.input.isKeyJustPressed(Input.Keys.Q)) Gdx.app.exit();
-        if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE) || Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) &&
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) Gdx.app.exit();
+        if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) || Gdx.input.isKeyJustPressed(Input.Keys.SPACE) &&
                 !isColliding) {
 //            jumpSound.play();
             entity.jump();
@@ -145,21 +150,24 @@ public class BouncyAsep extends ApplicationAdapter {
 
         if (entity.getVelocity() != 0) isRunning = true;
 
-        for (Obstacle obs : obstacles) {
-            if (Util.isColliding(entity.getX(), entity.getY(), obs.getTopPipe().getX(), obs.getTopPipe().getY())) {
-                isRunning = false;
-                isColliding = true;
-            }
-            if (Util.isColliding(entity.getX(), entity.getY(), obs.getBottomPipe().getX(), obs.getBottomPipe().getY())) {
-                isRunning = false;
-                isColliding = true;
-            }
-        }
+//        for (Obstacle obs : obstacles) {
+//            if (Util.isColliding(entity.getX(), entity.getY(), obs.getTopPipe().getX(), obs.getTopPipe().getY())) {
+//                isRunning = false;
+//                isColliding = true;
+//            }
+//            if (Util.isColliding(entity.getX(), entity.getY(), obs.getBottomPipe().getX(), obs.getBottomPipe().getY())) {
+//                isRunning = false;
+//                isColliding = true;
+//            }
+//        }
         if (isRunning) {
-            entity.update(Gdx.graphics.getDeltaTime());
-            layer1.update(Gdx.graphics.getDeltaTime());
-            layer2.update(Gdx.graphics.getDeltaTime());
-            layer3.update(Gdx.graphics.getDeltaTime());
+            float deltaTime = Gdx.graphics.getDeltaTime();
+
+            entity.update(deltaTime);
+            sprite.update(deltaTime);
+            layer1.update(deltaTime);
+            layer2.update(deltaTime);
+            layer3.update(deltaTime);
         }
     }
 
