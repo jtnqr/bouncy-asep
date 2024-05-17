@@ -96,21 +96,29 @@ public class Obstacle {
         return this.tileSquared;
     }
 
-    public boolean isColliding(Rectangle entity) {
-        // Check collision with top pipe
-//        if (entity.overlaps(topPipe)) {
-//            return true;
-//        }
+    public boolean checkCollision(Rectangle entity) {
+        // Check collision with top and bottom pipes
+        if (entity.overlaps(topPipe) || entity.overlaps(bottomPipe)) {
+            return true;
+        }
 
-        // Check collision with bottom pipe
-//        if (entity.overlaps(bottomPipe)) {
-//            return true;
-//        }
+        // Check collision with filler tiles
+        float obstacleX = topPipe.getX();
+        float topY = topPipe.getY() / tileSquared;
+        float botY = bottomPipe.getY() / tileSquared;
 
-        // Check if entity is within the gap between pipes
-        return (entity.y < topPipe.y && bottomPipe.y + bottomPipe.height > entity.y);
+        for (int i = 0; i < 12; i++) {
+            if ((i >= topY && i - 1 < botY)) {
+                continue;
+            }
 
-//        return !(entity.y + entity.height < pipeCenterY || entity.y > pipeCenterY + gap);
+            Rectangle fillerRect = new Rectangle(obstacleX, tileSquared * i, topPipe.getWidth(), topPipe.getHeight());
+            if (entity.overlaps(fillerRect)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
 

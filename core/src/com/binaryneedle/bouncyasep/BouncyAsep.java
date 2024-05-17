@@ -152,12 +152,7 @@ public class BouncyAsep extends ApplicationAdapter {
 
         if (collision) {
             for (Obstacle obs : obstacles) {
-//                if (Util.isColliding(entity, obs)) {
-//                    isRunning = false;
-////                    isColliding = true;
-//                }
-
-                if (obs.isColliding(entity)) {
+                if (obs.checkCollision(entity)) {
                     isRunning = false;
                 }
             }
