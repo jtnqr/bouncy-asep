@@ -80,8 +80,8 @@ public class BouncyAsep extends ApplicationAdapter {
 
         drawObstacles();
         drawScore();
-        drawDebugInfo();
-        drawMenuText();
+        drawDebugText();
+        drawInfoText();
 
         sprite.draw(batch, entity.getX(), entity.getY(), entity.getWidth(), entity.getHeight());
         batch.end();
@@ -132,9 +132,10 @@ public class BouncyAsep extends ApplicationAdapter {
         font.draw(batch, String.valueOf(score), 1024 / 2f - 5, 768 - 50);
     }
 
-    private void drawDebugInfo() {
+    private void drawDebugText() {
         if (isDebugEnabled) {
-            String debugText = "Y: " + Math.round(entity.getY()) +
+            String debugText = "FPS: " + Gdx.graphics.getFramesPerSecond() +
+                    "\nY: " + Math.round(entity.getY()) +
                     "\nVelocity: " + entity.getVelocity() +
                     "\ncollision: " + collision +
                     "\nGravity: " + entity.getGravity();
@@ -142,7 +143,7 @@ public class BouncyAsep extends ApplicationAdapter {
         }
     }
 
-    private void drawMenuText() {
+    private void drawInfoText() {
         if (!isRunning) {
             String menuText = isColliding
                     ? "GAME OVER, press R to reset the game"
