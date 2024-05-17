@@ -21,7 +21,7 @@ public class BouncyAsep extends ApplicationAdapter {
     private Sound jumpSound;
     private SpriteBatch batch;
     private OrthographicCamera camera;
-    private BitmapFont font;
+    private BitmapFont font, debugFont;
     private MainEntity entity;
     private boolean isRunning, isColliding, isDebugEnabled, collision = true;
     private final int tileSquared = 64;
@@ -57,6 +57,8 @@ public class BouncyAsep extends ApplicationAdapter {
 
         font = new BitmapFont();
         font.setColor(Color.WHITE);
+        font.getData().setScale(3.0f);
+        debugFont = new BitmapFont();
         obstacles = new ArrayList<>();
 
         for (int i = 0; i < 5; i++) {
@@ -129,7 +131,16 @@ public class BouncyAsep extends ApplicationAdapter {
     }
 
     private void drawScore() {
-        font.draw(batch, String.valueOf(score), 1024 / 2f - 5, 768 - 50);
+        font.draw(batch, String.valueOf(score), 1024 / 2f - 10, 768 - 50);
+    }
+
+    private void drawInfoText() {
+        if (!isRunning) {
+            String menuText = isColliding
+                    ? "GAME OVER, press R to reset the game"
+                    : "Press SPACE or LMB to play the game";
+            font.draw(batch, menuText, 1024 / 8f, 768 / 3f);
+        }
     }
 
     private void drawDebugText() {
@@ -139,16 +150,7 @@ public class BouncyAsep extends ApplicationAdapter {
                     "\nVelocity: " + entity.getVelocity() +
                     "\ncollision: " + collision +
                     "\nGravity: " + entity.getGravity();
-            font.draw(batch, debugText, 10, 768 - 10);
-        }
-    }
-
-    private void drawInfoText() {
-        if (!isRunning) {
-            String menuText = isColliding
-                    ? "GAME OVER, press R to reset the game"
-                    : "Press SPACE or LMB to play the game";
-            font.draw(batch, menuText, 1024 / 2f - 140, 768 / 2f - 150);
+            debugFont.draw(batch, debugText, 10, 768 - 10);
         }
     }
 
