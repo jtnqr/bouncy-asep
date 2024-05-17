@@ -10,7 +10,6 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
-import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.utils.ScreenUtils;
 
 import java.util.ArrayList;
@@ -25,11 +24,12 @@ public class BouncyAsep extends ApplicationAdapter {
     OrthographicCamera camera;
     BitmapFont font;
     MainEntity entity;
-    boolean isRunning, isColliding;
+    boolean isRunning, isColliding, isDebugEnabled;
     private final int tileSquared = 64;
     List<Obstacle> obstacles;
     Character sprite;
     boolean collision = true;
+    int score = 0;
 
     @Override
     public void create() {
@@ -113,12 +113,25 @@ public class BouncyAsep extends ApplicationAdapter {
         }
 
         font.setColor(Color.WHITE);
-        String debugText = "Y: " + Math.round(entity.getY()) +
-                "\nVelocity: " + entity.getVelocity() +
-                "\ncollision: " + collision +
-                "\nGravity: " + entity.getGravity();
+        font.draw(batch, "Score: " + score, 1024 / 2f - 70, 768 - 50);
 
-        font.draw(batch, debugText, 10, 768 - 10);
+        if (isDebugEnabled) {
+            String debugText = "Y: " + Math.round(entity.getY()) +
+                    "\nVelocity: " + entity.getVelocity() +
+                    "\ncollision: " + collision +
+                    "\nGravity: " + entity.getGravity();
+            font.draw(batch, debugText, 10, 768 - 10);
+        }
+
+        if (!isRunning) {
+            String menuText = "";
+            if (isColliding) {
+                menuText = "You crashed, press R to reset the game";
+            } else {
+                menuText = "Press SPACE or LMB to play the game";
+            }
+            font.draw(batch, menuText, 1024 / 2f - 140, 768 / 2f - 150);
+        }
 
         sprite.draw(batch, entity.getX(), entity.getY(), entity.getWidth(), entity.getHeight());
 
@@ -139,8 +152,11 @@ public class BouncyAsep extends ApplicationAdapter {
             layer1.reset();
             layer2.reset();
             layer3.reset();
+
+            score = 0;
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) Gdx.app.exit();
+        if (Gdx.input.isKeyJustPressed(Input.Keys.F12)) isDebugEnabled = !isDebugEnabled;
         if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_0)) collision = !collision;
         if (!isColliding && Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) ||
                 Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
@@ -165,6 +181,13 @@ public class BouncyAsep extends ApplicationAdapter {
             layer1.update(deltaTime);
             layer2.update(deltaTime);
             layer3.update(deltaTime);
+        }
+
+        for (Obstacle obs : obstacles) {
+            if (!obs.isPassed() && entity.getX() > obs.getTopPipe().getX() + obs.getTopPipe().getWidth()) {
+                obs.setPassed(true);
+                score++;
+            }
         }
     }
 

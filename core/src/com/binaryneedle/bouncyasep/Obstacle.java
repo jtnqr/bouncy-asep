@@ -15,6 +15,7 @@ public class Obstacle {
     private float gap;
     private float tileSquared;
     private int maxY;
+    private boolean passed;
 
     public Obstacle(float initialX, int maxY, float gap, float speed, float tileSquared) {
         this.speed = speed;
@@ -39,6 +40,7 @@ public class Obstacle {
         if (this.topPipe.x < -gap * 2 / 3f - 1f) {
             setX(1024f + 15f + 4f);
             setRandomY(0, this.maxY);
+            this.passed = false;
         }
 
         topPipe.x -= speed * deltaTime;
@@ -90,6 +92,7 @@ public class Obstacle {
     public void reset() {
         setX(initalX);
         setRandomY(0, this.maxY);
+        this.passed = false;
     }
 
     public float getTileSquared() {
@@ -119,6 +122,14 @@ public class Obstacle {
         }
 
         return false;
+    }
+
+    public boolean isPassed() {
+        return passed;
+    }
+
+    public void setPassed(boolean passed) {
+        this.passed = passed;
     }
 }
 
