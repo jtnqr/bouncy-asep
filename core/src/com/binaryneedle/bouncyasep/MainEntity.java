@@ -6,6 +6,8 @@ public class MainEntity extends Rectangle {
     private float gravity = 1000.0f;
     private float velocity = 0;
     private final float power = 500;
+    private final float upperBound = 768 - 20 - 64;
+    private final float lowerBound = 20;
 
     public MainEntity(float initialX, float initialY, float width, float height) {
         super(initialX, initialY, width, height);
@@ -33,10 +35,9 @@ public class MainEntity extends Rectangle {
 
     public void update(float deltaTime) {
         velocity -= gravity * deltaTime;
-
         float newY = y + velocity * deltaTime;
 
-        if (newY < 768 - 20 - 64 && newY > 20) {
+        if (newY < upperBound && newY > lowerBound) {
             y = newY;
         } else {
             velocity = 0;

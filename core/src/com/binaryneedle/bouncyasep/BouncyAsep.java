@@ -129,7 +129,7 @@ public class BouncyAsep extends ApplicationAdapter {
     }
 
     private void drawScore() {
-        font.draw(batch, "Score: " + score, 1024 / 2f - 35, 768 - 50);
+        font.draw(batch, String.valueOf(score), 1024 / 2f - 5, 768 - 50);
     }
 
     private void drawDebugInfo() {
