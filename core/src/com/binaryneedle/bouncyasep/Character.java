@@ -45,6 +45,14 @@ public class Character extends ApplicationAdapter {
         currentFrame = animation.getKeyFrame(elapsedTime, true);
     }
 
+    public int getWidth() {
+        return this.frameWidth;
+    }
+
+    public int getHeight() {
+        return this.frameHeight;
+    }
+
     @Override
     public void dispose() {
         batch.dispose();

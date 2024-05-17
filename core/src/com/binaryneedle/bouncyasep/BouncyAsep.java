@@ -26,11 +26,10 @@ public class BouncyAsep extends ApplicationAdapter {
     BitmapFont font;
     MainEntity entity;
     boolean isRunning, isColliding;
-    private Texture tilesetTexture;
-    private TextureRegion topTile, bottomTile, fillerTile;
     private final int tileSquared = 64;
     List<Obstacle> obstacles;
     Character sprite;
+    boolean collision = true;
 
     @Override
     public void create() {
@@ -47,11 +46,14 @@ public class BouncyAsep extends ApplicationAdapter {
         camera = new OrthographicCamera();
         camera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
 
+        sprite = new Character();
+        sprite.create();
+
         entity = new MainEntity(
                 1024 / 2f - 64 / 2f,
                 768 / 2f,
-                tileSquared,
-                tileSquared
+                sprite.getWidth(),
+                sprite.getHeight()
         );
 
         font = new BitmapFont();
@@ -60,9 +62,6 @@ public class BouncyAsep extends ApplicationAdapter {
         for (int i = 0; i < 5; i++) {
             obstacles.add(new Obstacle(16f + (4f * i), 7, 5f, 250f, tileSquared));
         }
-
-        sprite = new Character();
-        sprite.create();
     }
 
     @Override
@@ -116,12 +115,12 @@ public class BouncyAsep extends ApplicationAdapter {
         font.setColor(Color.WHITE);
         String debugText = "Y: " + Math.round(entity.getY()) +
                 "\nVelocity: " + entity.getVelocity() +
+                "\ncollision: " + collision +
                 "\nGravity: " + entity.getGravity();
 
         font.draw(batch, debugText, 10, 768 - 10);
 
-        sprite.draw(batch, entity.getX(), entity.getY(), tileSquared, tileSquared);
-
+        sprite.draw(batch, entity.getX(), entity.getY(), entity.getWidth(), entity.getHeight());
 
         batch.end();
         engineRun();
@@ -142,24 +141,27 @@ public class BouncyAsep extends ApplicationAdapter {
             layer3.reset();
         }
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) Gdx.app.exit();
-        if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) || Gdx.input.isKeyJustPressed(Input.Keys.SPACE) &&
-                !isColliding) {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_0)) collision = !collision;
+        if (!isColliding && Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) ||
+                Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
 //            jumpSound.play();
             entity.jump();
         }
 
         if (entity.getVelocity() != 0) isRunning = true;
 
-//        for (Obstacle obs : obstacles) {
-//            if (Util.isColliding(entity.getX(), entity.getY(), obs.getTopPipe().getX(), obs.getTopPipe().getY())) {
-//                isRunning = false;
-//                isColliding = true;
-//            }
-//            if (Util.isColliding(entity.getX(), entity.getY(), obs.getBottomPipe().getX(), obs.getBottomPipe().getY())) {
-//                isRunning = false;
-//                isColliding = true;
-//            }
-//        }
+        if (collision) {
+            for (Obstacle obs : obstacles) {
+//                if (Util.isColliding(entity, obs)) {
+//                    isRunning = false;
+////                    isColliding = true;
+//                }
+
+                if (obs.isColliding(entity)) {
+                    isRunning = false;
+                }
+            }
+        }
         if (isRunning) {
             float deltaTime = Gdx.graphics.getDeltaTime();
 

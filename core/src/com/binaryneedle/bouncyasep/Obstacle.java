@@ -4,8 +4,6 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.math.Rectangle;
 
-import java.util.List;
-
 import static com.badlogic.gdx.math.MathUtils.random;
 
 public class Obstacle {
@@ -96,6 +94,23 @@ public class Obstacle {
 
     public float getTileSquared() {
         return this.tileSquared;
+    }
+
+    public boolean isColliding(Rectangle entity) {
+        // Check collision with top pipe
+//        if (entity.overlaps(topPipe)) {
+//            return true;
+//        }
+
+        // Check collision with bottom pipe
+//        if (entity.overlaps(bottomPipe)) {
+//            return true;
+//        }
+
+        // Check if entity is within the gap between pipes
+        return (entity.y < topPipe.y && bottomPipe.y + bottomPipe.height > entity.y);
+
+//        return !(entity.y + entity.height < pipeCenterY || entity.y > pipeCenterY + gap);
     }
 }
 
