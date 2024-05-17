@@ -81,11 +81,12 @@ public class BouncyAsep extends ApplicationAdapter {
         layer3.draw(batch, Gdx.graphics.getHeight());
 
         drawObstacles();
-        drawScore();
-        drawDebugText();
-        drawInfoText();
-
         sprite.draw(batch, entity.getX(), entity.getY(), entity.getWidth(), entity.getHeight());
+
+        drawScore();
+        drawInfoText();
+        drawDebugText();
+
         batch.end();
 
         engineRun();
@@ -98,7 +99,7 @@ public class BouncyAsep extends ApplicationAdapter {
             float botY = obs.getBottomPipe().getY() / tileSquared;
 
             for (int i = 0; i < 12; i++) {
-                if ((i >= topY && i - 1 < botY)) {
+                if (i >= topY && i - 1 < botY) {
                     continue;
                 }
 
