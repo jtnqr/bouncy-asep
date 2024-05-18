@@ -4,7 +4,6 @@ import com.badlogic.gdx.Application;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
-import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
@@ -18,10 +17,9 @@ import java.util.List;
 public class BouncyAsep extends ApplicationAdapter {
     private Texture bucketImage, rainImage;
     private Background layer1, layer2, layer3;
-    private Sound jumpSound;
     private SpriteBatch batch;
     private OrthographicCamera camera;
-    private BitmapFont font, debugFont;
+    private BitmapFont infoFont, debugFont, titleFont;
     private MainEntity entity;
     private boolean isRunning, isColliding, isDebugEnabled, collision = true;
     private final int tileSquared = 64;
@@ -36,7 +34,6 @@ public class BouncyAsep extends ApplicationAdapter {
 
         bucketImage = new Texture(Gdx.files.internal("bucket.png"));
         rainImage = new Texture(Gdx.files.internal("drop.png"));
-        jumpSound = Gdx.audio.newSound(Gdx.files.internal("jump.mp3"));
 
         layer1 = new Background("bg/background_layer_1.png", 0.1f);
         layer2 = new Background("bg/background_layer_2.png", 125f);
@@ -55,10 +52,12 @@ public class BouncyAsep extends ApplicationAdapter {
                 sprite.getHeight()
         );
 
-        font = new BitmapFont();
-        font.setColor(Color.WHITE);
-        font.getData().setScale(3.0f);
         debugFont = new BitmapFont();
+        infoFont = new BitmapFont();
+        infoFont.setColor(Color.WHITE);
+        infoFont.getData().setScale(3.0f);
+        titleFont = new BitmapFont();
+        titleFont.getData().setScale(4.0f);
         obstacles = new ArrayList<>();
 
         for (int i = 0; i < 5; i++) {
@@ -86,6 +85,7 @@ public class BouncyAsep extends ApplicationAdapter {
         drawScore();
         drawInfoText();
         drawDebugText();
+        drawTitleText();
 
         batch.end();
 
@@ -132,7 +132,14 @@ public class BouncyAsep extends ApplicationAdapter {
     }
 
     private void drawScore() {
-        font.draw(batch, String.valueOf(score), 1024 / 2f - 10, 768 - 50);
+        infoFont.draw(batch, String.valueOf(score), 1024 / 2f - 10, 768 - 50);
+    }
+
+    private void drawTitleText() {
+        if (!isRunning && !isColliding) {
+            String titleText = "Bouncy Asep: The Game";
+            titleFont.draw(batch, titleText, 1024 / 6f + 20, 768 - 130);
+        }
     }
 
     private void drawInfoText() {
@@ -140,7 +147,7 @@ public class BouncyAsep extends ApplicationAdapter {
             String menuText = isColliding
                     ? "GAME OVER, press R to reset the game"
                     : "Press SPACE or LMB to play the game";
-            font.draw(batch, menuText, 1024 / 8f, 768 / 3f);
+            infoFont.draw(batch, menuText, 1024 / 8f, 768 / 5f);
         }
     }
 
@@ -221,10 +228,11 @@ public class BouncyAsep extends ApplicationAdapter {
     @Override
     public void dispose() {
         batch.dispose();
-        font.dispose();
+        titleFont.dispose();
+        infoFont.dispose();
+        debugFont.dispose();
         rainImage.dispose();
         bucketImage.dispose();
-        jumpSound.dispose();
         layer1.dispose();
         layer2.dispose();
         layer3.dispose();
