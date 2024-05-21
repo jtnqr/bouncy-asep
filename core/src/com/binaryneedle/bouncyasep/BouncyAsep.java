@@ -15,13 +15,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class BouncyAsep extends ApplicationAdapter {
+    private final int tileSquared = 64;
     private Background layer1, layer2, layer3;
     private SpriteBatch batch;
     private OrthographicCamera camera;
     private BitmapFont infoFont, debugFont, titleFont;
     private MainEntity entity;
     private boolean isRunning, isColliding, isDebugEnabled, collision = true;
-    private final int tileSquared = 64;
     private List<Obstacle> obstacles;
     private Character sprite;
     private int score;
@@ -177,17 +177,18 @@ public class BouncyAsep extends ApplicationAdapter {
      * Handles the main game logic, updating the game state, checking for collisions, and handling user input.
      */
     public void engineRun() {
+        float deltaTime = Gdx.graphics.getDeltaTime();
+
         handleInput();
 
         if (isRunning) {
-            float deltaTime = Gdx.graphics.getDeltaTime();
-
             entity.update(deltaTime);
-            sprite.update(deltaTime);
             layer1.update(deltaTime);
             layer2.update(deltaTime);
             layer3.update(deltaTime);
         }
+        if (isColliding) sprite.startDie();
+        sprite.update(deltaTime, entity.getVelocity());
 
         checkObstaclePass();
     }
@@ -199,10 +200,14 @@ public class BouncyAsep extends ApplicationAdapter {
         if (Gdx.input.isKeyJustPressed(Input.Keys.R)) resetGame();
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) Gdx.app.exit();
         if (Gdx.input.isKeyJustPressed(Input.Keys.F12)) isDebugEnabled = !isDebugEnabled;
-        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_0)) collision = !collision;
+        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_0)) {
+            sprite.startJump();
+            collision = !collision;
+        }
 
         if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) ||
                 Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+            sprite.startJump();
             entity.jump();
         }
 
@@ -214,6 +219,8 @@ public class BouncyAsep extends ApplicationAdapter {
                     isColliding = true;
                 }
             }
+        } else {
+            isColliding = false;
         }
     }
 
@@ -233,6 +240,7 @@ public class BouncyAsep extends ApplicationAdapter {
      * Resets the game to its initial state, including the position of the main character and obstacles.
      */
     private void resetGame() {
+        sprite.startStand();
         isColliding = false;
         isRunning = false;
         entity.setVelocity(0);
