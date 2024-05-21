@@ -6,16 +6,15 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
-import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.ScreenUtils;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class BouncyAsep extends ApplicationAdapter {
-    private Texture bucketImage, rainImage;
     private Background layer1, layer2, layer3;
     private SpriteBatch batch;
     private OrthographicCamera camera;
@@ -27,13 +26,13 @@ public class BouncyAsep extends ApplicationAdapter {
     private Character sprite;
     private int score;
 
+    /**
+     * Initializes the game assets, fonts, camera, layers, sprite, entity, obstacles, and other game variables.
+     */
     @Override
     public void create() {
         Gdx.app.setLogLevel(Application.LOG_DEBUG);
         batch = new SpriteBatch();
-
-        bucketImage = new Texture(Gdx.files.internal("bucket.png"));
-        rainImage = new Texture(Gdx.files.internal("drop.png"));
 
         layer1 = new Background("bg/background_layer_1.png", 0.1f);
         layer2 = new Background("bg/background_layer_2.png", 125f);
@@ -61,13 +60,16 @@ public class BouncyAsep extends ApplicationAdapter {
         obstacles = new ArrayList<>();
 
         for (int i = 0; i < 5; i++) {
-            obstacles.add(new Obstacle(16f + (4f * i), 7, 5f, 250f, tileSquared));
+            obstacles.add(new Obstacle(16f + (5f * i), 7, 5f, 250f, tileSquared));
         }
 
         score = 0;
     }
 
-
+    /**
+     * Clears the screen and renders the game elements such as backgrounds, obstacles, the main character, score, and text.
+     * Also updates the game logic.
+     */
     @Override
     public void render() {
         ScreenUtils.clear(0, 0, 0.2f, 1);
@@ -92,49 +94,52 @@ public class BouncyAsep extends ApplicationAdapter {
         engineRun();
     }
 
+    /**
+     * Draws the obstacles on the screen and updates their position if the game is running.
+     */
     private void drawObstacles() {
         for (Obstacle obs : obstacles) {
-            float obstacleX = obs.getTopPipe().getX();
-            float topY = obs.getTopPipe().getY() / tileSquared;
-            float botY = obs.getBottomPipe().getY() / tileSquared;
+            float obstacleX = obs.getTopRect().getX();
 
-            for (int i = 0; i < 12; i++) {
-                if (i >= topY && i - 1 < botY) {
-                    continue;
-                }
-
+            for (Rectangle fillerRect : obs.getFillerRects()) {
                 batch.draw(
                         obs.getFillerTile(),
-                        obstacleX,
-                        obs.getTileSquared() * i,
-                        obs.getTopPipe().getWidth(),
-                        obs.getTopPipe().getHeight()
+                        fillerRect.x,
+                        fillerRect.y,
+                        fillerRect.width,
+                        fillerRect.height
                 );
             }
 
             batch.draw(
                     obs.getTopTile(),
                     obstacleX,
-                    obs.getTopPipe().getY(),
-                    obs.getTopPipe().getWidth(),
-                    obs.getTopPipe().getHeight()
+                    obs.getTopRect().getY(),
+                    obs.getTopRect().getWidth(),
+                    obs.getTopRect().getHeight()
             );
             batch.draw(
                     obs.getBottomTile(),
                     obstacleX,
-                    obs.getBottomPipe().getY(),
-                    obs.getBottomPipe().getWidth(),
-                    obs.getBottomPipe().getHeight()
+                    obs.getBottomRect().getY(),
+                    obs.getBottomRect().getWidth(),
+                    obs.getBottomRect().getHeight()
             );
 
             if (isRunning) obs.update(Gdx.graphics.getDeltaTime());
         }
     }
 
+    /**
+     * Draws the player's score on the screen.
+     */
     private void drawScore() {
         infoFont.draw(batch, String.valueOf(score), 1024 / 2f - 10, 768 - 50);
     }
 
+    /**
+     * Draws the title text when the game is not running and there are no collisions.
+     */
     private void drawTitleText() {
         if (!isRunning && !isColliding) {
             String titleText = "Bouncy Asep: The Game";
@@ -142,15 +147,21 @@ public class BouncyAsep extends ApplicationAdapter {
         }
     }
 
+    /**
+     * Draws instructional text when the game is not running.
+     */
     private void drawInfoText() {
         if (!isRunning) {
             String menuText = isColliding
-                    ? "GAME OVER, press R to reset the game"
-                    : "Press SPACE or LMB to play the game";
-            infoFont.draw(batch, menuText, 1024 / 8f, 768 / 5f);
+                    ? "GAME OVER, press R to reset"
+                    : "Press SPACE or LMB to play";
+            infoFont.draw(batch, menuText, 1024 / 4f - 30, 768 / 5f);
         }
     }
 
+    /**
+     * Draws debug information if debug mode is enabled.
+     */
     private void drawDebugText() {
         if (isDebugEnabled) {
             String debugText = "FPS: " + Gdx.graphics.getFramesPerSecond() +
@@ -162,6 +173,9 @@ public class BouncyAsep extends ApplicationAdapter {
         }
     }
 
+    /**
+     * Handles the main game logic, updating the game state, checking for collisions, and handling user input.
+     */
     public void engineRun() {
         handleInput();
 
@@ -178,6 +192,9 @@ public class BouncyAsep extends ApplicationAdapter {
         checkObstaclePass();
     }
 
+    /**
+     * Handles user input for jumping, restarting the game, toggling debug mode, and exiting the game.
+     */
     private void handleInput() {
         if (Gdx.input.isKeyJustPressed(Input.Keys.R)) resetGame();
         if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) Gdx.app.exit();
@@ -200,15 +217,21 @@ public class BouncyAsep extends ApplicationAdapter {
         }
     }
 
+    /**
+     * Checks if the player has passed an obstacle and updates the score.
+     */
     private void checkObstaclePass() {
         for (Obstacle obs : obstacles) {
-            if (!obs.isPassed() && entity.getX() > obs.getTopPipe().getX() + obs.getTopPipe().getWidth()) {
+            if (!obs.isPassed() && entity.getX() > obs.getTopRect().getX() + obs.getTopRect().getWidth()) {
                 obs.setPassed(true);
                 score++;
             }
         }
     }
 
+    /**
+     * Resets the game to its initial state, including the position of the main character and obstacles.
+     */
     private void resetGame() {
         isColliding = false;
         isRunning = false;
@@ -225,14 +248,15 @@ public class BouncyAsep extends ApplicationAdapter {
         score = 0;
     }
 
+    /**
+     * Disposes of assets when the game is closed to free up resources.
+     */
     @Override
     public void dispose() {
         batch.dispose();
         titleFont.dispose();
         infoFont.dispose();
         debugFont.dispose();
-        rainImage.dispose();
-        bucketImage.dispose();
         layer1.dispose();
         layer2.dispose();
         layer3.dispose();
