@@ -4,6 +4,7 @@ import com.badlogic.gdx.Application;
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.audio.Sound;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
@@ -17,11 +18,12 @@ import java.util.List;
 public class BouncyAsep extends ApplicationAdapter {
     private final int tileSquared = 64;
     private Background layer1, layer2, layer3;
+    private Sound jumpSound, crashSound;
     private SpriteBatch batch;
     private OrthographicCamera camera;
     private BitmapFont infoFont, debugFont, titleFont;
     private MainEntity entity;
-    private boolean isRunning, isColliding, isDebugEnabled, collision = true;
+    private boolean isRunning, isColliding, isDebugEnabled, collision = true, collisionHandled;
     private List<Obstacle> obstacles;
     private Character sprite;
     private int score;
@@ -37,6 +39,9 @@ public class BouncyAsep extends ApplicationAdapter {
         layer1 = new Background("bg/background_layer_1.png", 0.1f);
         layer2 = new Background("bg/background_layer_2.png", 125f);
         layer3 = new Background("bg/background_layer_3.png", 250f);
+
+        jumpSound = Gdx.audio.newSound(Gdx.files.internal("sounds/jump.wav"));
+        crashSound = Gdx.audio.newSound(Gdx.files.internal("sounds/hurt.wav"));
 
         camera = new OrthographicCamera();
         camera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
@@ -187,7 +192,11 @@ public class BouncyAsep extends ApplicationAdapter {
             layer2.update(deltaTime);
             layer3.update(deltaTime);
         }
-        if (isColliding) sprite.startDie();
+        if (isColliding && !collisionHandled) {
+            sprite.startDie();
+            crashSound.play();
+            collisionHandled = true;
+        }
         sprite.update(deltaTime, entity.getVelocity());
 
         checkObstaclePass();
@@ -205,9 +214,10 @@ public class BouncyAsep extends ApplicationAdapter {
             collision = !collision;
         }
 
-        if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) ||
-                Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+        if ((Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) ||
+                Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) && !isColliding) {
             sprite.startJump();
+            jumpSound.play();
             entity.jump();
         }
 
@@ -243,6 +253,7 @@ public class BouncyAsep extends ApplicationAdapter {
         sprite.startStand();
         isColliding = false;
         isRunning = false;
+        collisionHandled = false;
         entity.setVelocity(0);
         entity.setY(768 / 2f);
 
@@ -268,5 +279,8 @@ public class BouncyAsep extends ApplicationAdapter {
         layer1.dispose();
         layer2.dispose();
         layer3.dispose();
+        jumpSound.dispose();
+        crashSound.dispose();
+        sprite.dispose();
     }
 }
