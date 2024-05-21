@@ -212,6 +212,7 @@ public class BouncyAsep extends ApplicationAdapter {
         if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_0)) {
             sprite.startJump();
             collision = !collision;
+            collisionHandled = false;
         }
 
         if ((Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) ||
