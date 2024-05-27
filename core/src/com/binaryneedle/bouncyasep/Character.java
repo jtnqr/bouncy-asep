@@ -88,21 +88,19 @@ public class Character extends ApplicationAdapter {
     public void startJump() {
         isAnimationFinished = false;
         jump();
-        // Additional logic to handle the jump animation
     }
 
     public void startStand() {
+        isAnimationFinished = false;
         stand();
     }
 
     public void startFall() {
         fall();
-        // Additional logic to handle the fall animation
     }
 
     public void startDie() {
         die();
-        // Additional logic to handle the death animation
     }
 
     /**

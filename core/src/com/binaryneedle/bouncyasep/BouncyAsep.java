@@ -18,7 +18,7 @@ import java.util.List;
 public class BouncyAsep extends ApplicationAdapter {
     private final int tileSquared = 64;
     private Background layer1, layer2, layer3;
-    private Sound jumpSound, crashSound;
+    private Sound jumpSound, crashSound, passSound;
     private SpriteBatch batch;
     private OrthographicCamera camera;
     private BitmapFont infoFont, debugFont, titleFont;
@@ -42,6 +42,7 @@ public class BouncyAsep extends ApplicationAdapter {
 
         jumpSound = Gdx.audio.newSound(Gdx.files.internal("sounds/jump.wav"));
         crashSound = Gdx.audio.newSound(Gdx.files.internal("sounds/hurt.wav"));
+        passSound = Gdx.audio.newSound(Gdx.files.internal("sounds/pass.wav"));
 
         camera = new OrthographicCamera();
         camera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
@@ -242,6 +243,7 @@ public class BouncyAsep extends ApplicationAdapter {
         for (Obstacle obs : obstacles) {
             if (!obs.isPassed() && entity.getX() > obs.getTopRect().getX() + obs.getTopRect().getWidth()) {
                 obs.setPassed(true);
+                passSound.play();
                 score++;
             }
         }
@@ -258,9 +260,7 @@ public class BouncyAsep extends ApplicationAdapter {
         entity.setVelocity(0);
         entity.setY(768 / 2f);
 
-        for (Obstacle obs : obstacles) {
-            obs.reset();
-        }
+        for (Obstacle obs : obstacles) obs.reset();
         layer1.reset();
         layer2.reset();
         layer3.reset();
@@ -282,6 +282,7 @@ public class BouncyAsep extends ApplicationAdapter {
         layer3.dispose();
         jumpSound.dispose();
         crashSound.dispose();
+        passSound.dispose();
         sprite.dispose();
     }
 }
