@@ -17,7 +17,6 @@ public class Obstacle {
     private static final float RESET_MARGIN = 15f;
     private static final float TILE_WIDTH = 24f;
     private final Rectangle topRect;
-    private float speed;
     private final Rectangle bottomRect;
     private final Array<Rectangle> fillerRects;
     private final TextureRegion topTile;
@@ -25,9 +24,10 @@ public class Obstacle {
     private final TextureRegion fillerTile;
     private final float initialX;
     private final float gap;
-    private boolean passed;
     private final float tileSquared;
     private final int maxY;
+    private float speed;
+    private boolean passed;
 
     /**
      * Creates an obstacle with specified parameters.

@@ -12,7 +12,7 @@ public class DesktopLauncher {
         config.useVsync(false);
         config.setResizable(false);
         config.setTitle("Bouncy Asep: The Game");
-        config.setWindowIcon("icons/logo.jpg");
+//        config.setWindowIcon("icons/logo.jpg");
         new Lwjgl3Application(new BouncyAsep(), config);
     }
 }

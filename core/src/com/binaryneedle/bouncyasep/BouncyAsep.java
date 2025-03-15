@@ -171,10 +171,11 @@ public class BouncyAsep extends ApplicationAdapter {
     private void drawDebugText() {
         if (isDebugEnabled) {
             String debugText = "FPS: " + Gdx.graphics.getFramesPerSecond() +
-                    "\nY: " + Math.round(entity.getY()) +
-                    "\nVelocity: " + entity.getVelocity() +
-                    "\ncollision: " + collision +
-                    "\nGravity: " + entity.getGravity();
+                    "\nsprite_y: " + Math.round(entity.getY()) +
+                    "\ngravity: " + entity.getGravity() +
+                    "\nsprite_collision: " + collision +
+                    "\nsprite_velocity: " + entity.getVelocity() +
+                    "\nobstacle_speed: " + obstacles.getFirst().getSpeed();
             debugFont.draw(batch, debugText, 10, 768 - 10);
         }
     }
@@ -246,6 +247,11 @@ public class BouncyAsep extends ApplicationAdapter {
                 passSound.play();
                 score++;
             }
+
+//            TODO: dynamic difficulty scaling
+//            if (score % 2 == 0) {
+//                if ()
+//            }
         }
     }
 

@@ -124,10 +124,10 @@ public class Character extends ApplicationAdapter {
     public void update(float deltaTime, float entityVelocity) {
         if (!isAnimationFinished) {
             elapsedTime += deltaTime;
-            currentFrame = animation.getKeyFrame(elapsedTime, true);
-
-            if (state == 3 && animation.getKeyFrameIndex(elapsedTime) == animation.getKeyFrames().length - 1) {
-                isAnimationFinished = true;
+            if (state == 3) {
+                currentFrame = animation.getKeyFrame(elapsedTime, false);
+            } else {
+                currentFrame = animation.getKeyFrame(elapsedTime, true);
             }
         }
 
