@@ -11,22 +11,45 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.ScreenUtils;
+import com.badlogic.gdx.utils.viewport.FitViewport;
+import com.badlogic.gdx.utils.viewport.Viewport;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class BouncyAsep extends ApplicationAdapter {
-    private final int tileSquared = 64;
-    private Background layer1, layer2, layer3;
-    private Sound jumpSound, crashSound, passSound;
+
+    // Game constants
+    private static final int WORLD_WIDTH = 1024;
+    private static final int WORLD_HEIGHT = 768;
+    private static final int TILE_SIZE = 64;
+    private static final int INITIAL_OBSTACLE_COUNT = 5;
+    private static final float OBSTACLE_SPACING = 5f;
+    private static final float OBSTACLE_BASE_X = 16f;
+    private static final float OBSTACLE_GAP = 250f;
+    private static final float OBSTACLE_WIDTH = 7f;
+    private static final float MAX_OBSTACLE_SPEED = 800f;
+
+    // Core components
     private SpriteBatch batch;
     private OrthographicCamera camera;
-    private BitmapFont infoFont, debugFont, titleFont;
+    private Viewport viewport;
+    // Game objects
+    private GameState currentState = GameState.MENU;
     private MainEntity entity;
-    private boolean isRunning, isColliding, isDebugEnabled, collision = true, collisionHandled;
-    private List<Obstacle> obstacles;
     private Character sprite;
-    private int score;
+    private List<Obstacle> obstacles;
+    // Background layers
+    private Background layer1, layer2, layer3;
+    // Audio
+    private Sound jumpSound, crashSound, passSound;
+    // UI
+    private BitmapFont debugFont, infoFont, titleFont;
+    private int score = 0;
+    private boolean isDebugEnabled = false;
+    // Game settings
+    private boolean collisionEnabled = true;
+    private boolean collisionHandled = false;
 
     /**
      * Initializes the game assets, fonts, camera, layers, sprite, entity, obstacles, and other game variables.
@@ -34,261 +57,486 @@ public class BouncyAsep extends ApplicationAdapter {
     @Override
     public void create() {
         Gdx.app.setLogLevel(Application.LOG_DEBUG);
-        batch = new SpriteBatch();
 
+        initializeGraphics();
+        initializeAudio();
+        initializeFonts();
+        initializeGameObjects();
+        initializeObstacles();
+
+        resetGame();
+    }
+
+    /**
+     * Initialize graphics components (camera, viewport, batch).
+     */
+    private void initializeGraphics() {
+        batch = new SpriteBatch();
+        camera = new OrthographicCamera();
+        viewport = new FitViewport(WORLD_WIDTH, WORLD_HEIGHT, camera);
+        viewport.apply();
+        camera.position.set(WORLD_WIDTH / 2f, WORLD_HEIGHT / 2f, 0);
+        camera.update();
+
+        Obstacle.setCamera(camera);
+    }
+
+    /**
+     * Initialize audio resources.
+     */
+    private void initializeAudio() {
+        jumpSound = Gdx.audio.newSound(Gdx.files.internal("sounds/jump.wav"));
+        crashSound = Gdx.audio.newSound(Gdx.files.internal("sounds/hurt.wav"));
+        passSound = Gdx.audio.newSound(Gdx.files.internal("sounds/pass.wav"));
+    }
+
+    /**
+     * Initialize fonts with proper scaling.
+     */
+    private void initializeFonts() {
+        debugFont = new BitmapFont();
+        debugFont.setColor(Color.WHITE);
+
+        infoFont = new BitmapFont();
+        infoFont.setColor(Color.WHITE);
+        infoFont.getData().setScale(3.0f);
+
+        titleFont = new BitmapFont();
+        titleFont.setColor(Color.CYAN);
+        titleFont.getData().setScale(4.0f);
+    }
+
+    /**
+     * Initialize game objects (entity, sprite, background layers).
+     */
+    private void initializeGameObjects() {
+        // Initialize background layers
         layer1 = new Background("bg/background_layer_1.png", 0.1f);
         layer2 = new Background("bg/background_layer_2.png", 125f);
         layer3 = new Background("bg/background_layer_3.png", 250f);
 
-        jumpSound = Gdx.audio.newSound(Gdx.files.internal("sounds/jump.wav"));
-        crashSound = Gdx.audio.newSound(Gdx.files.internal("sounds/hurt.wav"));
-        passSound = Gdx.audio.newSound(Gdx.files.internal("sounds/pass.wav"));
+        // Initialize character sprite
+        sprite = new Character("sprites/char_blue_1.png");
 
-        camera = new OrthographicCamera();
-        camera.setToOrtho(false, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
-
-        sprite = new Character();
-        sprite.create();
-
+        // Initialize main entity
         entity = new MainEntity(
-                1024 / 2f - 64 / 2f,
-                768 / 2f,
-                sprite.getWidth(),
-                sprite.getHeight()
+                WORLD_WIDTH / 2f - TILE_SIZE / 2f,
+                WORLD_HEIGHT / 2f,
+                sprite.getFrameWidth(),
+                sprite.getFrameHeight()
         );
-
-        debugFont = new BitmapFont();
-        infoFont = new BitmapFont();
-        infoFont.setColor(Color.WHITE);
-        infoFont.getData().setScale(3.0f);
-        titleFont = new BitmapFont();
-        titleFont.getData().setScale(4.0f);
-        obstacles = new ArrayList<>();
-
-        for (int i = 0; i < 5; i++) {
-            obstacles.add(new Obstacle(16f + (5f * i), 7, 5f, 250f, tileSquared));
-        }
-
-        score = 0;
     }
 
     /**
-     * Clears the screen and renders the game elements such as backgrounds, obstacles, the main character, score, and text.
-     * Also updates the game logic.
+     * Initialize obstacles with proper spacing.
+     */
+    private void initializeObstacles() {
+        obstacles = new ArrayList<>();
+        for (int i = 0; i < INITIAL_OBSTACLE_COUNT; i++) {
+            float x = OBSTACLE_BASE_X + (OBSTACLE_SPACING * i);
+            obstacles.add(new Obstacle(x, OBSTACLE_WIDTH, OBSTACLE_SPACING, OBSTACLE_GAP, TILE_SIZE));
+        }
+    }
+
+    /**
+     * Main render loop.
      */
     @Override
     public void render() {
-        ScreenUtils.clear(0, 0, 0.2f, 1);
-        camera.update();
-        batch.setProjectionMatrix(camera.combined);
-        batch.begin();
-
-        layer1.draw(batch, Gdx.graphics.getHeight());
-        layer2.draw(batch, Gdx.graphics.getHeight());
-        layer3.draw(batch, Gdx.graphics.getHeight());
-
-        drawObstacles();
-        sprite.draw(batch, entity.getX(), entity.getY(), entity.getWidth(), entity.getHeight());
-
-        drawScore();
-        drawInfoText();
-        drawDebugText();
-        drawTitleText();
-
-        batch.end();
-
-        engineRun();
-    }
-
-    /**
-     * Draws the obstacles on the screen and updates their position if the game is running.
-     */
-    private void drawObstacles() {
-        for (Obstacle obs : obstacles) {
-            float obstacleX = obs.getTopRect().getX();
-
-            for (Rectangle fillerRect : obs.getFillerRects()) {
-                batch.draw(
-                        obs.getFillerTile(),
-                        fillerRect.x,
-                        fillerRect.y,
-                        fillerRect.width,
-                        fillerRect.height
-                );
-            }
-
-            batch.draw(
-                    obs.getTopTile(),
-                    obstacleX,
-                    obs.getTopRect().getY(),
-                    obs.getTopRect().getWidth(),
-                    obs.getTopRect().getHeight()
-            );
-            batch.draw(
-                    obs.getBottomTile(),
-                    obstacleX,
-                    obs.getBottomRect().getY(),
-                    obs.getBottomRect().getWidth(),
-                    obs.getBottomRect().getHeight()
-            );
-
-            if (isRunning) obs.update(Gdx.graphics.getDeltaTime());
-        }
-    }
-
-    /**
-     * Draws the player's score on the screen.
-     */
-    private void drawScore() {
-        infoFont.draw(batch, String.valueOf(score), 1024 / 2f - 10, 768 - 50);
-    }
-
-    /**
-     * Draws the title text when the game is not running and there are no collisions.
-     */
-    private void drawTitleText() {
-        if (!isRunning && !isColliding) {
-            String titleText = "Bouncy Asep: The Game";
-            titleFont.draw(batch, titleText, 1024 / 6f + 20, 768 - 130);
-        }
-    }
-
-    /**
-     * Draws instructional text when the game is not running.
-     */
-    private void drawInfoText() {
-        if (!isRunning) {
-            String menuText = isColliding
-                    ? "GAME OVER, press R to reset"
-                    : "Press SPACE or LMB to play";
-            infoFont.draw(batch, menuText, 1024 / 4f - 30, 768 / 5f);
-        }
-    }
-
-    /**
-     * Draws debug information if debug mode is enabled.
-     */
-    private void drawDebugText() {
-        if (isDebugEnabled) {
-            String debugText = "FPS: " + Gdx.graphics.getFramesPerSecond() +
-                    "\nsprite_y: " + Math.round(entity.getY()) +
-                    "\ngravity: " + entity.getGravity() +
-                    "\nsprite_collision: " + collision +
-                    "\nsprite_velocity: " + entity.getVelocity() +
-                    "\nobstacle_speed: " + obstacles.getFirst().getSpeed();
-            debugFont.draw(batch, debugText, 10, 768 - 10);
-        }
-    }
-
-    /**
-     * Handles the main game logic, updating the game state, checking for collisions, and handling user input.
-     */
-    public void engineRun() {
         float deltaTime = Gdx.graphics.getDeltaTime();
 
+        // Clear screen
+        ScreenUtils.clear(0, 0, 0.2f, 1);
+
+        // Update camera and viewport
+        camera.update();
+        batch.setProjectionMatrix(camera.combined);
+
+        // Handle input
         handleInput();
 
-        if (isRunning) {
-            entity.update(deltaTime);
-            layer1.update(deltaTime);
-            layer2.update(deltaTime);
-            layer3.update(deltaTime);
+        // Update game logic
+        update(deltaTime);
+
+        // Render everything
+        renderGame();
+    }
+
+    /**
+     * Handle viewport resize.
+     */
+    @Override
+    public void resize(int width, int height) {
+        viewport.update(width, height);
+        camera.position.set(WORLD_WIDTH / 2f, WORLD_HEIGHT / 2f, 0);
+    }
+
+    /**
+     * Update game logic based on current state.
+     */
+    private void update(float deltaTime) {
+        switch (currentState) {
+            case MENU:
+                // Menu state - only update sprite animation
+                sprite.update(deltaTime, entity.getVelocity());
+                break;
+
+            case PLAYING:
+                updatePlaying(deltaTime);
+                break;
+
+            case GAME_OVER:
+                updateGameOver(deltaTime);
+                break;
         }
-        if (isColliding && !collisionHandled) {
-            sprite.startDie();
-            crashSound.play();
-            collisionHandled = true;
-        }
+    }
+
+    /**
+     * Update logic for playing state.
+     */
+    private void updatePlaying(float deltaTime) {
+        // Update game objects
+        entity.update(deltaTime);
         sprite.update(deltaTime, entity.getVelocity());
 
+        // Update background layers
+        layer1.update(deltaTime);
+        layer2.update(deltaTime);
+        layer3.update(deltaTime);
+
+        // Update obstacles
+        for (Obstacle obstacle : obstacles) {
+            obstacle.update(deltaTime);
+        }
+
+        // Check collisions
+        checkCollisions();
+
+        // Check obstacle passes
         checkObstaclePass();
     }
 
     /**
-     * Handles user input for jumping, restarting the game, toggling debug mode, and exiting the game.
+     * Update logic for game over state.
+     */
+    private void updateGameOver(float deltaTime) {
+        if (!collisionHandled) {
+            sprite.setState(Character.State.DEAD);
+            crashSound.play();
+            collisionHandled = true;
+        }
+        sprite.update(deltaTime, entity.getVelocity());
+    }
+
+    /**
+     * Check for collisions between entity and obstacles.
+     */
+    private void checkCollisions() {
+        if (!collisionEnabled) return;
+
+        for (Obstacle obstacle : obstacles) {
+            if (obstacle.checkCollision(entity)) {
+                currentState = GameState.GAME_OVER;
+                break;
+            }
+        }
+    }
+
+    /**
+     * Check if player has passed any obstacles and update score.
+     */
+    private void checkObstaclePass() {
+        for (Obstacle obstacle : obstacles) {
+            if (!obstacle.isPassed() &&
+                    entity.getX() > obstacle.getTopRect().getX() + obstacle.getTopRect().getWidth()) {
+                obstacle.setPassed(true);
+                passSound.play();
+                score++;
+
+                // TODO: Implement dynamic difficulty scaling
+                if (score % 5 == 0) {
+                    increaseDifficulty();
+                }
+            }
+        }
+    }
+
+    private void increaseDifficulty() {
+        for (Obstacle obstacle : obstacles) {
+            float currentSpeed = obstacle.getSpeed();
+            if (currentSpeed < MAX_OBSTACLE_SPEED) {
+                obstacle.setSpeed(currentSpeed + 25f);
+            }
+        }
+    }
+
+    /**
+     * Render all game elements.
+     */
+    private void renderGame() {
+        batch.begin();
+
+        // Draw background layers
+        layer1.draw(batch, WORLD_HEIGHT);
+        layer2.draw(batch, WORLD_HEIGHT);
+        layer3.draw(batch, WORLD_HEIGHT);
+
+        // Draw obstacles
+        drawObstacles();
+
+        // Draw main character
+        sprite.draw(batch, entity.getX(), entity.getY(), entity.getWidth(), entity.getHeight());
+
+        // Draw UI
+        drawUI();
+
+        batch.end();
+    }
+
+    /**
+     * Draw obstacles on screen.
+     */
+    private void drawObstacles() {
+        for (Obstacle obstacle : obstacles) {
+            Rectangle topRect = obstacle.getTopRect();
+            Rectangle bottomRect = obstacle.getBottomRect();
+
+            // Draw filler rectangles
+            for (Rectangle fillerRect : obstacle.getFillerRects()) {
+                batch.draw(
+                        obstacle.getFillerTile(),
+                        fillerRect.x, fillerRect.y,
+                        fillerRect.width, fillerRect.height
+                );
+            }
+
+            // Draw top and bottom tiles
+            batch.draw(
+                    obstacle.getTopTile(),
+                    topRect.x, topRect.y,
+                    topRect.width, topRect.height
+            );
+
+            batch.draw(
+                    obstacle.getBottomTile(),
+                    bottomRect.x, bottomRect.y,
+                    bottomRect.width, bottomRect.height
+            );
+        }
+    }
+
+    /**
+     * Draw all UI elements.
+     */
+    private void drawUI() {
+        drawScore();
+        drawStateSpecificUI();
+        drawDebugInfo();
+    }
+
+    /**
+     * Draw score display.
+     */
+    private void drawScore() {
+        if (currentState == GameState.PLAYING || currentState == GameState.GAME_OVER) {
+            String scoreText = String.valueOf(score);
+            infoFont.draw(batch, scoreText, WORLD_WIDTH / 2f - 10, WORLD_HEIGHT - 50);
+        }
+    }
+
+    /**
+     * Draw UI elements specific to current game state.
+     */
+    private void drawStateSpecificUI() {
+        switch (currentState) {
+            case MENU:
+                drawMenuUI();
+                break;
+            case GAME_OVER:
+                drawGameOverUI();
+                break;
+            case PLAYING:
+                // No additional UI for playing state
+                break;
+        }
+    }
+
+    /**
+     * Draw menu UI.
+     */
+    private void drawMenuUI() {
+        String titleText = "Bouncy Asep: The Game";
+        titleFont.draw(batch, titleText, WORLD_WIDTH / 6f + 20, WORLD_HEIGHT - 130);
+
+        String menuText = "Press SPACE or LMB to play";
+        infoFont.draw(batch, menuText, WORLD_WIDTH / 4f - 30, WORLD_HEIGHT / 5f);
+    }
+
+    /**
+     * Draw game over UI.
+     */
+    private void drawGameOverUI() {
+        String gameOverText = "GAME OVER";
+        titleFont.draw(batch, gameOverText, WORLD_WIDTH / 3f, WORLD_HEIGHT / 2f + 50);
+
+        String restartText = "Press R to restart";
+        infoFont.draw(batch, restartText, WORLD_WIDTH / 3f, WORLD_HEIGHT / 2f - 50);
+    }
+
+    /**
+     * Draw debug information if enabled.
+     */
+    private void drawDebugInfo() {
+        if (!isDebugEnabled) return;
+
+        StringBuilder debugText = new StringBuilder()
+                .append("FPS: ").append(Gdx.graphics.getFramesPerSecond())
+                .append("\nState: ").append(currentState)
+                .append("\nEntity Y: ").append(Math.round(entity.getY()))
+                .append("\nGravity: ").append(entity.getGravity())
+                .append("\nCollision: ").append(collisionEnabled)
+                .append("\nVelocity: ").append(String.format("%.2f", entity.getVelocity()))
+                .append("\nScore: ").append(score);
+
+        if (!obstacles.isEmpty()) {
+            debugText.append("\nObstacle Speed: ").append(obstacles.get(0).getSpeed());
+        }
+
+        debugFont.draw(batch, debugText.toString(), 10, WORLD_HEIGHT - 10);
+    }
+
+    /**
+     * Handle user input based on current game state.
      */
     private void handleInput() {
-        if (Gdx.input.isKeyJustPressed(Input.Keys.R)) resetGame();
-        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) Gdx.app.exit();
-        if (Gdx.input.isKeyJustPressed(Input.Keys.F12)) isDebugEnabled = !isDebugEnabled;
+        // Global inputs
+        if (Gdx.input.isKeyJustPressed(Input.Keys.ESCAPE)) {
+            Gdx.app.exit();
+        }
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.F12)) {
+            isDebugEnabled = !isDebugEnabled;
+        }
+
+        // Debug collision toggle
         if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_0)) {
-            sprite.startJump();
-            collision = !collision;
+            collisionEnabled = !collisionEnabled;
             collisionHandled = false;
         }
 
-        if ((Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) ||
-                Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) && !isColliding) {
-            sprite.startJump();
-            jumpSound.play();
-            entity.jump();
-        }
-
-        if (entity.getVelocity() != 0) isRunning = true;
-        if (collision) {
-            for (Obstacle obs : obstacles) {
-                if (obs.checkCollision(entity)) {
-                    isRunning = false;
-                    isColliding = true;
-                }
-            }
-        } else {
-            isColliding = false;
+        // State-specific input handling
+        switch (currentState) {
+            case MENU:
+                handleMenuInput();
+                break;
+            case PLAYING:
+                handlePlayingInput();
+                break;
+            case GAME_OVER:
+                handleGameOverInput();
+                break;
         }
     }
 
     /**
-     * Checks if the player has passed an obstacle and updates the score.
+     * Handle input during menu state.
      */
-    private void checkObstaclePass() {
-        for (Obstacle obs : obstacles) {
-            if (!obs.isPassed() && entity.getX() > obs.getTopRect().getX() + obs.getTopRect().getWidth()) {
-                obs.setPassed(true);
-                passSound.play();
-                score++;
-            }
-
-//            TODO: dynamic difficulty scaling
-//            if (score % 2 == 0) {
-//                if ()
-//            }
+    private void handleMenuInput() {
+        if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) ||
+                Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+            startGame();
         }
     }
 
     /**
-     * Resets the game to its initial state, including the position of the main character and obstacles.
+     * Handle input during playing state.
+     */
+    private void handlePlayingInput() {
+        if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) ||
+                Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) {
+            jump();
+        }
+    }
+
+    /**
+     * Handle input during game over state.
+     */
+    private void handleGameOverInput() {
+        if (Gdx.input.isKeyJustPressed(Input.Keys.R)) {
+            resetGame();
+        }
+    }
+
+    /**
+     * Start the game from menu.
+     */
+    private void startGame() {
+        currentState = GameState.PLAYING;
+        jump(); // Initial jump to start movement
+    }
+
+    /**
+     * Make the character jump.
+     */
+    private void jump() {
+        sprite.startJump();
+        jumpSound.play();
+        entity.jump();
+    }
+
+    /**
+     * Reset the game to initial state.
      */
     private void resetGame() {
-        sprite.startStand();
-        isColliding = false;
-        isRunning = false;
+        currentState = GameState.MENU;
+        sprite.setState(Character.State.STANDING);
         collisionHandled = false;
-        entity.setVelocity(0);
-        entity.setY(768 / 2f);
+        score = 0;
 
-        for (Obstacle obs : obstacles) obs.reset();
+        // Reset entity
+        entity.setVelocity(0);
+        entity.setY(WORLD_HEIGHT / 2f);
+
+        // Reset obstacles
+        for (Obstacle obstacle : obstacles) {
+            obstacle.reset();
+        }
+
+        // Reset background layers
         layer1.reset();
         layer2.reset();
         layer3.reset();
-
-        score = 0;
     }
 
     /**
-     * Disposes of assets when the game is closed to free up resources.
+     * Dispose of all resources.
      */
     @Override
     public void dispose() {
-        batch.dispose();
-        titleFont.dispose();
-        infoFont.dispose();
-        debugFont.dispose();
-        layer1.dispose();
-        layer2.dispose();
-        layer3.dispose();
-        jumpSound.dispose();
-        crashSound.dispose();
-        passSound.dispose();
-        sprite.dispose();
+        // Dispose graphics
+        if (batch != null) batch.dispose();
+
+        // Dispose fonts
+        if (debugFont != null) debugFont.dispose();
+        if (infoFont != null) infoFont.dispose();
+        if (titleFont != null) titleFont.dispose();
+
+        // Dispose background layers
+        if (layer1 != null) layer1.dispose();
+        if (layer2 != null) layer2.dispose();
+        if (layer3 != null) layer3.dispose();
+
+        // Dispose audio
+        if (jumpSound != null) jumpSound.dispose();
+        if (crashSound != null) crashSound.dispose();
+        if (passSound != null) passSound.dispose();
+
+        // Dispose sprite
+        if (sprite != null) sprite.dispose();
+    }
+
+    // Game state
+    public enum GameState {
+        MENU, PLAYING, GAME_OVER
     }
 }

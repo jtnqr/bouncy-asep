@@ -1,106 +1,156 @@
 package com.binaryneedle.bouncyasep;
 
-import com.badlogic.gdx.ApplicationAdapter;
-import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.Animation;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.utils.Disposable;
 
 /**
  * The Character class represents an animated character in the game.
- * It extends the ApplicationAdapter class and handles the creation, drawing,
- * updating, and disposal of the character's animation.
+ * It handles the creation, drawing, updating, and disposal of the character's animation.
  */
-public class Character extends ApplicationAdapter {
-    SpriteBatch batch;
-    Texture texture;
-    Animation<TextureRegion> animation;
-    TextureRegion currentFrame;
+public class Character implements Disposable {
 
-    float elapsedTime = 0f;
-    int frameWidth = 56;
-    int frameHeight = 56;
-    float frameDuration = 0.16f;
-    int state = 0; // 0 = standing, 1 = jumping, 2 = falling, 3 = died
+    // Animation frame configurations for each state
+    private static final AnimationConfig[] ANIMATION_CONFIGS = {
+            new AnimationConfig(0, 0, 1, true),   // STANDING
+            new AnimationConfig(3, 6, 2, true),   // JUMPING
+            new AnimationConfig(4, 1, 4, true),   // FALLING
+            new AnimationConfig(6, 0, 12, false)  // DEAD (spans multiple rows)
+    };
+    // Core components
+    private final Texture texture;
+    private final TextureRegion[][] spriteSheet;
+    private final Animation<TextureRegion>[] animations;
+    // Frame properties
+    private final int frameWidth;
+    private final int frameHeight;
+    private final float frameDuration;
+    private TextureRegion currentFrame;
+    // Animation properties
+    private float elapsedTime = 0f;
+    private State currentState = State.STANDING;
     private boolean isAnimationFinished = false;
+    // Display properties
+    private float scale = 1.0f;
+    /**
+     * Creates a new Character with the specified texture and animation properties.
+     *
+     * @param texturePath   Path to the character sprite sheet
+     * @param frameWidth    Width of each frame in pixels
+     * @param frameHeight   Height of each frame in pixels
+     * @param frameDuration Duration of each frame in seconds
+     */
+    public Character(String texturePath, int frameWidth, int frameHeight, float frameDuration) {
+        this.frameWidth = frameWidth;
+        this.frameHeight = frameHeight;
+        this.frameDuration = frameDuration;
+
+        // Load texture and create sprite sheet
+        this.texture = new Texture(texturePath);
+        this.spriteSheet = TextureRegion.split(texture, frameWidth, frameHeight);
+
+        // Initialize animations
+        this.animations = new Animation[State.values().length];
+        initializeAnimations();
+
+        // Set initial frame
+        setState(State.STANDING);
+    }
 
     /**
-     * Initializes the character by setting up the sprite batch and animation frames.
+     * Convenience constructor with default values.
      */
-    @Override
-    public void create() {
-        batch = new SpriteBatch();
-        texture = new Texture(Gdx.files.internal("sprites/char_blue_1.png"));
-        stand(); // Set default standing animation
-        currentFrame = animation.getKeyFrame(elapsedTime);
+    public Character(String texturePath) {
+        this(texturePath, 56, 56, 0.16f);
     }
 
-    private void jump() {
-        state = 1;
-        TextureRegion[][] tmp = TextureRegion.split(texture, frameWidth, frameHeight);
-        TextureRegion[] animationFrames = new TextureRegion[2];
-
-        // Set frames for jumping
-        animationFrames[0] = tmp[3][6];
-        animationFrames[1] = tmp[3][7];
-
-        animation = new Animation<>(frameDuration, animationFrames);
+    /**
+     * Initialize all animations based on configuration.
+     */
+    @SuppressWarnings("unchecked")
+    private void initializeAnimations() {
+        for (State state : State.values()) {
+            animations[state.getValue()] = createAnimation(state);
+        }
     }
 
-    private void fall() {
-        state = 2;
-        TextureRegion[][] tmp = TextureRegion.split(texture, frameWidth, frameHeight);
-        TextureRegion[] animationFrames = new TextureRegion[4];
+    /**
+     * Creates animation for the specified state.
+     */
+    private Animation<TextureRegion> createAnimation(State state) {
+        AnimationConfig config = ANIMATION_CONFIGS[state.getValue()];
+        TextureRegion[] frames = new TextureRegion[config.frameCount];
 
-        // Set frames for falling
-        // Index 1 to 4
-        System.arraycopy(tmp[4], 1, animationFrames, 0, 4);
+        if (state == State.DEAD) {
+            // Special handling for death animation (spans multiple rows)
+            System.arraycopy(spriteSheet[6], 0, frames, 0, 8);
+            System.arraycopy(spriteSheet[7], 0, frames, 8, 4);
+        } else {
+            // Standard single-row animation
+            System.arraycopy(spriteSheet[config.startRow], config.startCol, frames, 0, config.frameCount);
+        }
 
-        animation = new Animation<>(frameDuration, animationFrames);
+        return new Animation<>(frameDuration, frames);
     }
 
-    private void stand() {
-        state = 0;
-        TextureRegion[][] tmp = TextureRegion.split(texture, frameWidth, frameHeight);
-        TextureRegion[] animationFrames = new TextureRegion[1];
-
-        // Set default frame (standing)
-        animationFrames[0] = tmp[0][0];
-
-        animation = new Animation<>(frameDuration, animationFrames);
+    /**
+     * Sets the character's state and updates animation accordingly.
+     */
+    public void setState(State newState) {
+        if (currentState != newState) {
+            currentState = newState;
+            elapsedTime = 0f;
+            isAnimationFinished = false;
+            updateCurrentFrame();
+        }
     }
 
-    private void die() {
-        state = 3;
-        TextureRegion[][] tmp = TextureRegion.split(texture, frameWidth, frameHeight);
-        TextureRegion[] animationFrames = new TextureRegion[12];
+    /**
+     * Updates the current frame based on elapsed time and state.
+     */
+    private void updateCurrentFrame() {
+        Animation<TextureRegion> currentAnimation = animations[currentState.getValue()];
+        AnimationConfig config = ANIMATION_CONFIGS[currentState.getValue()];
 
-        // Set frames for death
-        // Index 0 to 7
-        System.arraycopy(tmp[6], 0, animationFrames, 0, 8);
-        // Index 0 to 3
-        System.arraycopy(tmp[7], 0, animationFrames, 8, 4);
-
-        animation = new Animation<>(frameDuration, animationFrames);
+        if (config.loop) {
+            currentFrame = currentAnimation.getKeyFrame(elapsedTime, true);
+        } else {
+            currentFrame = currentAnimation.getKeyFrame(elapsedTime, false);
+            if (currentAnimation.isAnimationFinished(elapsedTime)) {
+                isAnimationFinished = true;
+            }
+        }
     }
 
-    public void startJump() {
-        isAnimationFinished = false;
-        jump();
+    /**
+     * Updates the animation by advancing the elapsed time.
+     *
+     * @param deltaTime      The time since the last frame
+     * @param entityVelocity The vertical velocity of the entity
+     */
+    public void update(float deltaTime, float entityVelocity) {
+        if (!isAnimationFinished) {
+            elapsedTime += deltaTime;
+            updateCurrentFrame();
+        }
+
+        // Auto-transition from jumping to falling when velocity becomes negative
+        if (currentState == State.JUMPING && entityVelocity < 0) {
+            setState(State.FALLING);
+        }
     }
 
-    public void startStand() {
-        isAnimationFinished = false;
-        stand();
-    }
-
-    public void startFall() {
-        fall();
-    }
-
-    public void startDie() {
-        die();
+    /**
+     * Draws the current frame of the animation at the specified position.
+     *
+     * @param batch The SpriteBatch used for drawing
+     * @param x     The X coordinate
+     * @param y     The Y coordinate
+     */
+    public void draw(SpriteBatch batch, float x, float y) {
+        draw(batch, x, y, getScaledWidth(), getScaledHeight());
     }
 
     /**
@@ -113,53 +163,113 @@ public class Character extends ApplicationAdapter {
      * @param height The height of the frame
      */
     public void draw(SpriteBatch batch, float x, float y, float width, float height) {
-        batch.draw(currentFrame, x, y, width, height);
-    }
-
-    /**
-     * Updates the animation by advancing the elapsed time.
-     *
-     * @param deltaTime The time since the last frame
-     */
-    public void update(float deltaTime, float entityVelocity) {
-        if (!isAnimationFinished) {
-            elapsedTime += deltaTime;
-            if (state == 3) {
-                currentFrame = animation.getKeyFrame(elapsedTime, false);
-            } else {
-                currentFrame = animation.getKeyFrame(elapsedTime, true);
-            }
-        }
-
-        if (state == 1 && entityVelocity < 0) {
-            startFall();
+        if (currentFrame != null) {
+            batch.draw(currentFrame, x, y, width, height);
         }
     }
 
+    // Convenience methods for state transitions
+    public void startJump() {
+        setState(State.JUMPING);
+    }
+
+    public void startStand() {
+        setState(State.STANDING);
+    }
+
+    public void startFall() {
+        setState(State.FALLING);
+    }
+
+    public void startDie() {
+        setState(State.DEAD);
+    }
+
+    // Getters
+    public State getCurrentState() {
+        return currentState;
+    }
+
+    public boolean isAnimationFinished() {
+        return isAnimationFinished;
+    }
+
+    public int getFrameWidth() {
+        return frameWidth;
+    }
+
+    public int getFrameHeight() {
+        return frameHeight;
+    }
+
+    public float getScale() {
+        return scale;
+    }
+
     /**
-     * Gets the width of a single frame in the animation.
+     * Sets the scale factor for the sprite rendering.
+     * A scale of 2.0f will make the sprite twice as large.
      *
-     * @return The frame width
+     * @param scale The scale factor (1.0f = normal size)
      */
+    public void setScale(float scale) {
+        this.scale = Math.max(0.1f, scale); // Prevent negative or zero scale
+    }
+
+    public float getScaledWidth() {
+        return frameWidth * scale;
+    }
+
+    public float getScaledHeight() {
+        return frameHeight * scale;
+    }
+
+    // Deprecated methods for backward compatibility
+    @Deprecated
     public int getWidth() {
-        return this.frameWidth;
+        return getFrameWidth();
     }
 
-    /**
-     * Gets the height of a single frame in the animation.
-     *
-     * @return The frame height
-     */
+    @Deprecated
     public int getHeight() {
-        return this.frameHeight;
+        return getFrameHeight();
     }
 
     /**
-     * Disposes of the sprite batch and texture when they are no longer needed.
+     * Disposes of the texture when it's no longer needed.
      */
     @Override
     public void dispose() {
-        batch.dispose();
-        texture.dispose();
+        if (texture != null) {
+            texture.dispose();
+        }
+    }
+
+    // Animation states
+    public enum State {
+        STANDING(0), JUMPING(1), FALLING(2), DEAD(3);
+
+        private final int value;
+
+        State(int value) {
+            this.value = value;
+        }
+
+        public int getValue() {
+            return value;
+        }
+    }
+
+    // Animation configurations
+    private static final class AnimationConfig {
+        final int startRow, startCol, frameCount;
+        final boolean loop;
+
+        AnimationConfig(int startRow, int startCol, int frameCount, boolean loop) {
+            this.startRow = startRow;
+            this.startCol = startCol;
+            this.frameCount = frameCount;
+            this.loop = loop;
+        }
     }
 }
